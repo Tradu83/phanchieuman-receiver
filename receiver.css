@@ -1,0 +1,45 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #212121;
+  color: #FFFFFF;
+  font-family: 'Roboto', sans-serif;
+  overflow: hidden;
+}
+
+/* Ẩn trình phát media mặc định ban đầu */
+cast-media-player {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+/* Giao diện màn hình chờ */
+#waiting-screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+#waiting-screen img {
+  width: 150px;
+  height: 150px;
+  margin-bottom: 20px;
+  border-radius: 20px;
+}
+
+#waiting-screen h1 {
+  font-size: 3em;
+  margin: 0;
+}
+
+#waiting-screen p {
+  font-size: 1.5em;
+  color: #B0B0B0;
+}
