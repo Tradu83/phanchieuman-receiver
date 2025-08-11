@@ -4,68 +4,67 @@
   <meta charset="UTF-8">
   <title>Phan Chieu Man Hinh Receiver</title>
   <link rel="stylesheet" href="receiver.css">
+
+  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+  <script src="https://vjs.zencdn.net/8.10.0/video.js"></script>
+
   <script type="text/javascript" src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-  <cast-media-player></cast-media-player>
-  
+
+  <video
+    id="receiver-video"
+    class="video-js vjs-big-play-centered"
+    controls
+    preload="auto"
+    width="1280"
+    height="720"
+    data-setup='{}'>
+  </video>
+
   <div id="waiting-screen">
     <img src="logo.png" alt="App Logo">
     <h1>Phan Chieu Man Hinh</h1>
-    <p>Sẵn sàng để nhận nội dung...</p>
+    <p>Sẵn sàng để phản chiếu màn hình...</p>
   </div>
 
   <script>
-    // Lấy các đối tượng quản lý chính của Cast
     const context = cast.framework.CastReceiverContext.getInstance();
     const playerManager = context.getPlayerManager();
-
-    // Lấy các phần tử HTML
+    const videoElement = document.getElementById('receiver-video');
+    const videoPlayer = videojs('receiver-video');
     const waitingScreen = document.getElementById('waiting-screen');
-    const playerElement = document.querySelector('cast-media-player');
 
-    // Tối ưu hóa cho việc nhận luồng trực tiếp (quan trọng cho phản chiếu màn hình sau này)
-    const playbackConfig = new cast.framework.PlaybackConfig();
-    playbackConfig.livePlaybackRebufferDuration = 2; // Giảm thời gian đệm
-    playbackConfig.autoResumeDuration = 1;
+    // Lắng nghe yêu cầu tải media từ điện thoại
+    playerManager.setMessageInterceptor(
+        cast.framework.messages.MessageType.LOAD,
+        loadRequestData => {
+            console.log('LOAD request received:', loadRequestData);
 
-    // Lắng nghe các sự kiện từ playerManager
-    playerManager.addEventListener(
-      cast.framework.events.EventType.PLAYER_LOADING,
-      () => {
-        // Khi media bắt đầu được tải, ẩn màn hình chờ và hiện trình phát
-        waitingScreen.style.display = 'none';
-        playerElement.style.display = 'block';
-      }
-    );
+            // Nếu là một luồng stream (không có thông tin media chi tiết)
+            if (loadRequestData.media && loadRequestData.media.contentUrl) {
+                const streamUrl = loadRequestData.media.contentUrl;
+                console.log('Streaming URL:', streamUrl);
 
-    // Lắng nghe sự kiện kết thúc hoặc dừng
-    playerManager.addEventListener(
-        cast.framework.events.EventType.REQUEST_STOP,
-        () => {
-            // Khi dừng, ẩn trình phát và hiện lại màn hình chờ
-            waitingScreen.style.display = 'flex';
-            playerElement.style.display = 'none';
-        }
-    );
-     playerManager.addEventListener(
-        cast.framework.events.EventType.PLAYER_STATE_CHANGED,
-        (event) => {
-            if (event.playerState === cast.framework.messages.PlayerState.IDLE &&
-                event.currentMedia === null) {
-                waitingScreen.style.display = 'flex';
-                playerElement.style.display = 'none';
+                waitingScreen.style.display = 'none';
+                videoElement.style.display = 'block';
+
+                // Đặt nguồn video cho Video.js và bắt đầu phát
+                videoPlayer.src({
+                    src: streamUrl,
+                    type: 'application/x-rtsp' // Quan trọng: chỉ định loại là RTSP
+                });
+                videoPlayer.play();
+
+                // Bỏ qua trình xử lý mặc định của CAF
+                return null;
             }
+            // Nếu là file media bình thường, để CAF xử lý
+            return loadRequestData;
         }
     );
 
-
-    // Khởi động Cast Receiver Framework
-    context.start({
-        playbackConfig: playbackConfig,
-        // Hỗ trợ các lệnh media cơ bản
-        supportedCommands: cast.framework.messages.Command.ALL_BASIC_MEDIA
-    });
+    context.start();
   </script>
 </body>
 </html>
