@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <title>Phan Chieu Man Hinh Receiver</title>
   <link rel="stylesheet" href="receiver.css">
+  <script type="text/javascript" src="https://mbebenita.github.io/Broadway/player/Broadway.js"></script>
   <script type="text/javascript" src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
   
-  <video id="receiver-video"></video>
+  <canvas id="video-canvas"></canvas>
 
   <div id="waiting-screen">
     <img src="logo.png" alt="App Logo">
@@ -20,20 +21,41 @@
     const context = cast.framework.CastReceiverContext.getInstance();
     const playerManager = context.getPlayerManager();
     const waitingScreen = document.getElementById('waiting-screen');
-    const videoElement = document.getElementById('receiver-video');
+    const canvas = document.getElementById('video-canvas');
+
+    // Khởi tạo trình giải mã Broadway
+    const player = new Player({
+      useWorker: true,
+      workerFile: 'https://mbebenita.github.io/Broadway/player/Decoder.js',
+      size: { width: 1280, height: 720 } // Kích thước ban đầu, sẽ được cập nhật
+    });
+    canvas.appendChild(player.canvas);
+
+    let webSocket = null;
 
     playerManager.setMessageInterceptor(
         cast.framework.messages.MessageType.LOAD,
         loadRequestData => {
-            if (loadRequestData.media && loadRequestData.media.contentUrl) {
-                const streamUrl = loadRequestData.media.contentUrl;
-
+            // Lấy địa chỉ IP của điện thoại từ customData
+            const host = loadRequestData.media.customData.host;
+            if (host) {
                 waitingScreen.style.display = 'none';
-                videoElement.style.display = 'block';
-                videoElement.src = streamUrl; // Chỉ cần gán URL cho thẻ video
-                videoElement.play();
+                canvas.style.display = 'block';
 
-                context.getPlayerManager().setMediaInformation(loadRequestData.media, true);
+                // Kết nối tới WebSocket trên điện thoại
+                const wsUrl = `ws://${host}:8080`;
+                webSocket = new WebSocket(wsUrl);
+                webSocket.binaryType = 'arraybuffer';
+
+                webSocket.onmessage = (event) => {
+                    // Khi nhận được dữ liệu video, đưa nó cho Broadway để giải mã
+                    const frame = new Uint8Array(event.data);
+                    player.decode(frame);
+                };
+
+                webSocket.onclose = () => { console.log('WebSocket disconnected'); };
+                webSocket.onerror = (err) => { console.error('WebSocket Error:', err); };
+
                 return null;
             }
             return loadRequestData;
