@@ -4,66 +4,41 @@
   <meta charset="UTF-8">
   <title>Phan Chieu Man Hinh Receiver</title>
   <link rel="stylesheet" href="receiver.css">
-
-  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-  <script src="https://vjs.zencdn.net/8.10.0/video.js"></script>
-
   <script type="text/javascript" src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-
-  <video
-    id="receiver-video"
-    class="video-js vjs-big-play-centered"
-    controls
-    preload="auto"
-    width="1280"
-    height="720"
-    data-setup='{}'>
-  </video>
+  
+  <video id="receiver-video"></video>
 
   <div id="waiting-screen">
     <img src="logo.png" alt="App Logo">
     <h1>Phan Chieu Man Hinh</h1>
-    <p>Sẵn sàng để phản chiếu màn hình...</p>
+    <p>Sẵn sàng để phản chiếu...</p>
   </div>
 
   <script>
     const context = cast.framework.CastReceiverContext.getInstance();
     const playerManager = context.getPlayerManager();
-    const videoElement = document.getElementById('receiver-video');
-    const videoPlayer = videojs('receiver-video');
     const waitingScreen = document.getElementById('waiting-screen');
+    const videoElement = document.getElementById('receiver-video');
 
-    // Lắng nghe yêu cầu tải media từ điện thoại
     playerManager.setMessageInterceptor(
         cast.framework.messages.MessageType.LOAD,
         loadRequestData => {
-            console.log('LOAD request received:', loadRequestData);
-
-            // Nếu là một luồng stream (không có thông tin media chi tiết)
             if (loadRequestData.media && loadRequestData.media.contentUrl) {
                 const streamUrl = loadRequestData.media.contentUrl;
-                console.log('Streaming URL:', streamUrl);
 
                 waitingScreen.style.display = 'none';
                 videoElement.style.display = 'block';
+                videoElement.src = streamUrl; // Chỉ cần gán URL cho thẻ video
+                videoElement.play();
 
-                // Đặt nguồn video cho Video.js và bắt đầu phát
-                videoPlayer.src({
-                    src: streamUrl,
-                    type: 'application/x-rtsp' // Quan trọng: chỉ định loại là RTSP
-                });
-                videoPlayer.play();
-
-                // Bỏ qua trình xử lý mặc định của CAF
+                context.getPlayerManager().setMediaInformation(loadRequestData.media, true);
                 return null;
             }
-            // Nếu là file media bình thường, để CAF xử lý
             return loadRequestData;
         }
     );
-
     context.start();
   </script>
 </body>
