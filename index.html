@@ -1,67 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Phan Chieu Man Hinh Receiver</title>
-  <link rel="stylesheet" href="receiver.css">
-  <script type="text/javascript" src="https://mbebenita.github.io/Broadway/player/Broadway.js"></script>
-  <script type="text/javascript" src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #000; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+    </style>
 </head>
 <body>
-  
-  <canvas id="video-canvas"></canvas>
+    <video id="videoElement" autoplay playsinline></video>
+    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+    <script>
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = context.getPlayerManager();
 
-  <div id="waiting-screen">
-    <img src="logo.png" alt="App Logo">
-    <h1>Phan Chieu Man Hinh</h1>
-    <p>Sẵn sàng để phản chiếu...</p>
-  </div>
-
-  <script>
-    const context = cast.framework.CastReceiverContext.getInstance();
-    const playerManager = context.getPlayerManager();
-    const waitingScreen = document.getElementById('waiting-screen');
-    const canvas = document.getElementById('video-canvas');
-
-    // Khởi tạo trình giải mã Broadway
-    const player = new Player({
-      useWorker: true,
-      workerFile: 'https://mbebenita.github.io/Broadway/player/Decoder.js',
-      size: { width: 1280, height: 720 } // Kích thước ban đầu, sẽ được cập nhật
-    });
-    canvas.appendChild(player.canvas);
-
-    let webSocket = null;
-
-    playerManager.setMessageInterceptor(
-        cast.framework.messages.MessageType.LOAD,
-        loadRequestData => {
-            // Lấy địa chỉ IP của điện thoại từ customData
-            const host = loadRequestData.media.customData.host;
-            if (host) {
-                waitingScreen.style.display = 'none';
-                canvas.style.display = 'block';
-
-                // Kết nối tới WebSocket trên điện thoại
-                const wsUrl = `ws://${host}:8080`;
-                webSocket = new WebSocket(wsUrl);
-                webSocket.binaryType = 'arraybuffer';
-
-                webSocket.onmessage = (event) => {
-                    // Khi nhận được dữ liệu video, đưa nó cho Broadway để giải mã
-                    const frame = new Uint8Array(event.data);
-                    player.decode(frame);
-                };
-
-                webSocket.onclose = () => { console.log('WebSocket disconnected'); };
-                webSocket.onerror = (err) => { console.error('WebSocket Error:', err); };
-
+        playerManager.setMessageInterceptor(
+            cast.framework.messages.MessageType.LOAD,
+            loadRequestData => {
+                const media = loadRequestData.media;
+                const videoUrl = media.contentId;
+                
+                console.log('Received load request for URL:', videoUrl);
+                
+                const videoElement = document.getElementById('videoElement');
+                videoElement.src = videoUrl;
+                videoElement.load();
+                videoElement.play().catch(error => {
+                    console.error('Video play failed:', error);
+                });
+                
+                // Trả về null để ngăn trình phát mặc định xử lý
                 return null;
             }
-            return loadRequestData;
-        }
-    );
-    context.start();
-  </script>
+        );
+
+        context.start();
+    </script>
 </body>
 </html>
