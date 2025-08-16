@@ -4,93 +4,42 @@
   <title>Chiếu Phone Receiver</title>
   <style>
     body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: #000;
-      position: relative; /* Cần để định vị nút */
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background-color: #000;
     }
-    video {
-      width: 100%;
-      height: 100%;
+    /* SỬA Ở ĐÂY: Dùng thẻ img thay vì video */
+    img {
+      width: 100%; height: 100%;
       object-fit: contain;
-      transition: transform 0.3s ease-in-out; /* Thêm hiệu ứng chuyển động mượt mà */
     }
-
-    /* === PHẦN MỚI: CSS cho video khi được xoay === */
-    video.rotated {
-      /* Xoay 90 độ và phóng to để vừa màn hình (16/9 ≈ 1.77) */
-      transform: rotate(90deg) scale(1.77);
-    }
-
-    /* === PHẦN MỚI: CSS cho nút điều khiển === */
-    #controls {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-    }
-    #rotateButton {
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      border: 1px solid white;
-      border-radius: 8px;
-      cursor: pointer;
-      opacity: 0.7;
-      transition: opacity 0.3s;
-    }
-    #rotateButton:hover {
-      opacity: 1;
-    }
+    /* Các style khác cho nút bấm có thể giữ nguyên */
   </style>
   <script type="text/javascript" src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-  <video id="videoPlayer" autoplay></video>
-
-  <div id="controls">
-    <button id="rotateButton">Xoay & Phóng to</button>
-  </div>
+  <img id="videoPlayer" />
 
   <script>
     const context = cast.framework.CastReceiverContext.getInstance();
     const playerManager = context.getPlayerManager();
-    const videoElement = document.getElementById('videoPlayer');
+    // SỬA Ở ĐÂY: Lấy thẻ img
+    const imageElement = document.getElementById('videoPlayer');
 
     playerManager.setMessageInterceptor(
       cast.framework.messages.MessageType.LOAD,
       (loadRequestData) => {
-        console.log("LOAD request received:", loadRequestData);
-        const videoUrl = loadRequestData.media.customData.videoUrl;
-        if (!videoUrl) {
-          return new cast.framework.messages.ErrorData(
-            cast.framework.messages.ErrorType.LOAD_FAILED
-          );
+        const streamUrl = loadRequestData.media.customData.videoUrl;
+        if (!streamUrl) {
+          // ... xử lý lỗi
         }
-        videoElement.src = videoUrl;
-        videoElement.play().catch(error => console.error("Error playing video:", error));
-        
-        // Reset trạng thái xoay về mặc định mỗi khi có luồng mới
-        videoElement.classList.remove('rotated');
+        // SỬA Ở ĐÂY: Gán URL cho thuộc tính src của thẻ <img>
+        imageElement.src = streamUrl;
         
         return loadRequestData;
       }
     );
     
-    // === PHẦN MỚI: JavaScript cho nút xoay ===
-    const rotateButton = document.getElementById('rotateButton');
-    rotateButton.onclick = function() {
-      // Thêm hoặc xóa class 'rotated' để bật/tắt hiệu ứng xoay
-      videoElement.classList.toggle('rotated');
-    };
-
     context.start();
-    console.log("Cast Receiver started.");
   </script>
 </body>
 </html>
