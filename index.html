@@ -10,11 +10,42 @@
       height: 100%;
       overflow: hidden;
       background-color: #000;
+      position: relative; /* Cần để định vị nút */
     }
     video {
       width: 100%;
       height: 100%;
-      object-fit: contain; /* Giữ tỷ lệ khung hình, không bị méo */
+      object-fit: contain;
+      transition: transform 0.3s ease-in-out; /* Thêm hiệu ứng chuyển động mượt mà */
+    }
+
+    /* === PHẦN MỚI: CSS cho video khi được xoay === */
+    video.rotated {
+      /* Xoay 90 độ và phóng to để vừa màn hình (16/9 ≈ 1.77) */
+      transform: rotate(90deg) scale(1.77);
+    }
+
+    /* === PHẦN MỚI: CSS cho nút điều khiển === */
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    #rotateButton {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: 1px solid white;
+      border-radius: 8px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+    #rotateButton:hover {
+      opacity: 1;
     }
   </style>
   <script type="text/javascript" src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
@@ -22,48 +53,42 @@
 <body>
   <video id="videoPlayer" autoplay></video>
 
+  <div id="controls">
+    <button id="rotateButton">Xoay & Phóng to</button>
+  </div>
+
   <script>
     const context = cast.framework.CastReceiverContext.getInstance();
     const playerManager = context.getPlayerManager();
+    const videoElement = document.getElementById('videoPlayer');
 
-    // Lắng nghe sự kiện khi Sender gửi yêu cầu LOAD
     playerManager.setMessageInterceptor(
       cast.framework.messages.MessageType.LOAD,
       (loadRequestData) => {
         console.log("LOAD request received:", loadRequestData);
-
-        // Lấy URL video stream từ customData
         const videoUrl = loadRequestData.media.customData.videoUrl;
-
         if (!videoUrl) {
-          console.error("Video URL is missing in customData");
           return new cast.framework.messages.ErrorData(
             cast.framework.messages.ErrorType.LOAD_FAILED
           );
         }
-        
-        const videoElement = document.getElementById('videoPlayer');
         videoElement.src = videoUrl;
-        videoElement.play().catch(error => {
-          console.error("Error trying to play video:", error);
-        });
-
-        // Thông báo rằng media đã được tải thành công
-        // Chúng ta sẽ bỏ qua việc quản lý trạng thái media phức tạp
-        // vì đây là một luồng trực tiếp đơn giản.
-        // Trả về null để cho phép trình phát mặc định xử lý.
-        // Tuy nhiên, vì chúng ta tự xử lý thẻ <video>, ta sẽ ngăn chặn
-        // trình phát mặc định bằng cách không trả về request.
-        // Hoặc đơn giản là trả về một thông báo thành công.
+        videoElement.play().catch(error => console.error("Error playing video:", error));
         
-        // Để đơn giản, chỉ cần phát video và không làm gì thêm.
-        // Trả về một đối tượng request đã được sửa đổi (hoặc không) để cho phép tải.
-        // Ở đây ta tự xử lý nên chỉ cần return request ban đầu.
+        // Reset trạng thái xoay về mặc định mỗi khi có luồng mới
+        videoElement.classList.remove('rotated');
+        
         return loadRequestData;
       }
     );
+    
+    // === PHẦN MỚI: JavaScript cho nút xoay ===
+    const rotateButton = document.getElementById('rotateButton');
+    rotateButton.onclick = function() {
+      // Thêm hoặc xóa class 'rotated' để bật/tắt hiệu ứng xoay
+      videoElement.classList.toggle('rotated');
+    };
 
-    // Bắt đầu Cast Receiver Context
     context.start();
     console.log("Cast Receiver started.");
   </script>
