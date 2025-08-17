@@ -1,72 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>Screen Mirror Receiver</title>
-    <meta charset="UTF-8">
-    <style>
-        body, html { 
-            margin: 0; padding: 0; height: 100%; width: 100%;
-            overflow: hidden; background-color: #000;
-        }
-        img { 
-            width: 100%; height: 100%; object-fit: contain; 
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Chiếu màn hình từ điện thoại</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+      background: #000;
+    }
+    #status {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-    <img id="screen-img" />
-    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
-    <script>
-        const CUSTOM_NAMESPACE = "urn:x-cast:com.tranduyen.chieuphone.custom";
-        const context = cast.framework.CastReceiverContext.getInstance();
-        const screenImg = document.getElementById('screen-img');
-        let websocket = null;
+  <canvas id="screen"></canvas>
+  <div id="status">Đang kết nối...</div>
 
-        // Lắng nghe tin nhắn tùy chỉnh từ điện thoại
-        context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
-            const data = event.data;
-            if (data && data.type === 'START_STREAM') {
-                console.log('Received START_STREAM command with URL:', data.url);
-                connectWebSocket(data.url);
-            }
-        });
+  <script>
+    const canvas = document.getElementById("screen");
+    const ctx = canvas.getContext("2d");
+    const status = document.getElementById("status");
 
-        function connectWebSocket(url) {
-            // Đóng kết nối cũ nếu có
-            if (websocket) {
-                websocket.close();
-            }
-            
-            websocket = new WebSocket(url);
-            websocket.binaryType = 'blob';
+    // ⚠️ Ứng dụng Android sẽ gửi đúng ws://<IP>:<PORT>
+    // Bạn chỉ cần để ChromeCast load file này, và service Android sẽ gửi URL bằng message
+    // Ở đây cho debug local có thể set cứng:
+    let wsUrl = null;
 
-            websocket.onopen = () => {
-                console.log('WebSocket connection established!');
-            };
-
-            // Khi nhận được một khung hình (dưới dạng binary blob)
-            websocket.onmessage = (event) => {
-                // Chuyển blob thành một URL tạm thời và gán vào ảnh
-                screenImg.src = URL.createObjectURL(event.data);
-            };
-
-            websocket.onerror = (error) => {
-                console.error('WebSocket Error:', error);
-            };
-
-            websocket.onclose = () => {
-                console.log('WebSocket connection closed.');
-            };
+    // Hàm nhận message START_STREAM từ Android
+    window.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "START_STREAM" && data.url) {
+          wsUrl = data.url;
+          startWebSocket();
         }
-        
-        context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
-            if (websocket) websocket.close();
-            window.close();
-        });
+      } catch (e) {
+        console.warn("Message parse error:", e);
+      }
+    });
 
-        const options = new cast.framework.CastReceiverOptions();
-        options.disableIdleTimeout = true;
-        context.start(options);
-    </script>
+    let ws;
+    function startWebSocket() {
+      if (!wsUrl) return;
+      status.innerText = "Đang kết nối: " + wsUrl;
+
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        status.innerText = "Đã kết nối: " + wsUrl;
+      };
+
+      ws.onmessage = (event) => {
+        const bytes = new Uint8Array(event.data);
+        const blob = new Blob([bytes], { type: "image/jpeg" });
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = URL.createObjectURL(blob);
+      };
+
+      ws.onclose = () => {
+        status.innerText = "Mất kết nối. Thử lại sau 2s...";
+        setTimeout(startWebSocket, 2000);
+      };
+
+      ws.onerror = (e) => {
+        console.error("WebSocket error:", e);
+        ws.close();
+      };
+    }
+
+    // DEBUG: Nếu bạn muốn test local PC (chưa nhận từ Android)
+    // wsUrl = "ws://192.168.1.100:8088";
+    // startWebSocket();
+  </script>
 </body>
 </html>
