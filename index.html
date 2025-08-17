@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Screen Mirror Receiver</title>
+    <meta charset="UTF-8">
     <style>
         body, html { 
             margin: 0; 
@@ -10,31 +11,36 @@
             width: 100%;
             overflow: hidden; 
             background-color: #000; 
-            color: white; /* Đặt màu chữ mặc định là trắng */
             font-family: sans-serif;
         }
         video { 
             width: 100%; 
             height: 100%; 
             object-fit: cover; 
-            position: absolute; /* Đặt video lên trên để che chữ khi phát */
+            position: absolute;
             top: 0;
             left: 0;
             z-index: 1;
+            /* Bắt đầu ẩn đi */
+            display: none; 
         }
-        /* <<< THÊM: Style cho dòng chữ kiểm tra >>> */
+        
+        /* <<< SỬA LẠI CSS ĐỂ ĐẢM BẢO CHỮ LUÔN HIỂN THỊ >>> */
         #status-text {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 32px;
-            z-index: 2; /* Hiển thị trên cùng ban đầu */
+            top: 45%; /* Đẩy lên một chút để dễ nhìn */
+            width: 100%;
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: #FFFF00; /* Dùng màu vàng sáng cho dễ thấy nhất */
+            text-shadow: 2px 2px 4px #000;
+            z-index: 2;
         }
     </style>
 </head>
 <body>
-    <div id="status-text">Kết nối thành công</div>
+    <div id="status-text">Chờ kết nối...</div>
 
     <video id="videoElement" autoplay playsinline></video>
     
@@ -43,12 +49,25 @@
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const statusText = document.getElementById('status-text');
+        const videoElement = document.getElementById('videoElement');
+
+        // <<< THÊM: Lắng nghe sự kiện khi có thiết bị kết nối >>>
+        context.addEventListener(cast.framework.system.EventType.SENDER_CONNECTED, () => {
+            console.log('Sender connected!');
+            statusText.textContent = 'Kết nối thành công. Đang chờ tín hiệu...';
+        });
+
+        // <<< THÊM: Lắng nghe sự kiện khi thiết bị ngắt kết nối >>>
+        context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
+            console.log('Sender disconnected. Closing window.');
+            window.close(); // Tự động đóng receiver khi không còn ai kết nối
+        });
 
         playerManager.setMessageInterceptor(
             cast.framework.messages.MessageType.LOAD,
             loadRequestData => {
-                // <<< THÊM: Ẩn dòng chữ đi khi bắt đầu tải video >>>
-                statusText.style.display = 'none';
+                statusText.style.display = 'none'; // Ẩn chữ đi
+                videoElement.style.display = 'block'; // Hiện video lên
 
                 const media = loadRequestData.media;
                 if (!media || !media.contentId) {
@@ -57,9 +76,8 @@
                 }
 
                 const videoUrl = media.contentId; 
-                console.log('>>> THÀNH CÔNG: TV đã nhận được lệnh LOAD với URL:', videoUrl);
+                console.log('>>> TV đã nhận được lệnh LOAD với URL:', videoUrl);
                 
-                const videoElement = document.getElementById('videoElement');
                 videoElement.src = videoUrl;
                 videoElement.load();
                 videoElement.play().catch(error => {
@@ -73,7 +91,7 @@
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
         context.start(options);
-        console.log('Receiver started. Status text should be visible.');
+        console.log('Receiver started.');
     </script>
 </body>
 </html>
