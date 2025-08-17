@@ -5,93 +5,69 @@
     <meta charset="UTF-8">
     <style>
         body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            width: 100%;
-            overflow: hidden; 
-            background-color: #000; 
-            font-family: sans-serif;
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            overflow: hidden; background-color: #000;
         }
-        video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-            /* Bắt đầu ẩn đi */
-            display: none; 
-        }
-        
-        /* <<< SỬA LẠI CSS ĐỂ ĐẢM BẢO CHỮ LUÔN HIỂN THỊ >>> */
-        #status-text {
-            position: absolute;
-            top: 45%; /* Đẩy lên một chút để dễ nhìn */
-            width: 100%;
-            text-align: center;
-            font-size: 36px;
-            font-weight: bold;
-            color: #FFFF00; /* Dùng màu vàng sáng cho dễ thấy nhất */
-            text-shadow: 2px 2px 4px #000;
-            z-index: 2;
+        img { 
+            width: 100%; height: 100%; object-fit: contain; 
         }
     </style>
 </head>
 <body>
-    <div id="status-text">Chờ kết nối...</div>
-
-    <video id="videoElement" autoplay playsinline></video>
+    <img id="screen-img" />
     
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
-        const statusText = document.getElementById('status-text');
-        const videoElement = document.getElementById('videoElement');
+        const screenImg = document.getElementById('screen-img');
+        let streamUrl = '';
+        let refreshInterval = null;
 
-        // <<< THÊM: Lắng nghe sự kiện khi có thiết bị kết nối >>>
-        context.addEventListener(cast.framework.system.EventType.SENDER_CONNECTED, () => {
-            console.log('Sender connected!');
-            statusText.textContent = 'Kết nối thành công. Đang chờ tín hiệu...';
-        });
+        // Hàm để làm mới ảnh
+        function refreshImage() {
+            if (streamUrl) {
+                // Thêm một tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
+                screenImg.src = streamUrl + '?t=' + new Date().getTime();
+            }
+        }
 
-        // <<< THÊM: Lắng nghe sự kiện khi thiết bị ngắt kết nối >>>
-        context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
-            console.log('Sender disconnected. Closing window.');
-            window.close(); // Tự động đóng receiver khi không còn ai kết nối
+        // Tắt bộ đệm của trình phát mặc định
+        playerManager.setMediaPlaybackInfoHandler((loadRequest, playbackConfig) => {
+            return playbackConfig;
         });
 
         playerManager.setMessageInterceptor(
             cast.framework.messages.MessageType.LOAD,
             loadRequestData => {
-                statusText.style.display = 'none'; // Ẩn chữ đi
-                videoElement.style.display = 'block'; // Hiện video lên
-
                 const media = loadRequestData.media;
                 if (!media || !media.contentId) {
-                    console.error('Load request received, but media or contentId is missing!');
+                    console.error('URL không hợp lệ!');
                     return null;
                 }
 
-                const videoUrl = media.contentId; 
-                console.log('>>> TV đã nhận được lệnh LOAD với URL:', videoUrl);
+                streamUrl = media.contentId;
+                console.log('Bắt đầu nhận ảnh từ:', streamUrl);
                 
-                videoElement.src = videoUrl;
-                videoElement.load();
-                videoElement.play().catch(error => {
-                    console.error('Lỗi khi cố gắng phát video:', error);
-                });
+                // Dừng interval cũ nếu có
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
                 
-                return null;
+                // Bắt đầu làm mới ảnh 15 lần mỗi giây
+                refreshInterval = setInterval(refreshImage, 1000 / 15);
+                
+                return new cast.framework.messages.MediaInformation();
             }
         );
+        
+        context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
+            window.close();
+        });
 
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
         context.start(options);
-        console.log('Receiver started.');
     </script>
 </body>
 </html>
