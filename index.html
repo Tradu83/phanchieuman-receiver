@@ -15,53 +15,52 @@
 </head>
 <body>
     <img id="screen-img" />
-    
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script>
+        const CUSTOM_NAMESPACE = "urn:x-cast:com.tranduyen.chieuphone.custom";
         const context = cast.framework.CastReceiverContext.getInstance();
-        const playerManager = context.getPlayerManager();
         const screenImg = document.getElementById('screen-img');
-        let streamUrl = '';
-        let refreshInterval = null;
+        let websocket = null;
 
-        // Hàm để làm mới ảnh
-        function refreshImage() {
-            if (streamUrl) {
-                // Thêm một tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
-                screenImg.src = streamUrl + '?t=' + new Date().getTime();
+        // Lắng nghe tin nhắn tùy chỉnh từ điện thoại
+        context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
+            const data = event.data;
+            if (data && data.type === 'START_STREAM') {
+                console.log('Received START_STREAM command with URL:', data.url);
+                connectWebSocket(data.url);
             }
-        }
-
-        // Tắt bộ đệm của trình phát mặc định
-        playerManager.setMediaPlaybackInfoHandler((loadRequest, playbackConfig) => {
-            return playbackConfig;
         });
 
-        playerManager.setMessageInterceptor(
-            cast.framework.messages.MessageType.LOAD,
-            loadRequestData => {
-                const media = loadRequestData.media;
-                if (!media || !media.contentId) {
-                    console.error('URL không hợp lệ!');
-                    return null;
-                }
-
-                streamUrl = media.contentId;
-                console.log('Bắt đầu nhận ảnh từ:', streamUrl);
-                
-                // Dừng interval cũ nếu có
-                if (refreshInterval) {
-                    clearInterval(refreshInterval);
-                }
-                
-                // Bắt đầu làm mới ảnh 15 lần mỗi giây
-                refreshInterval = setInterval(refreshImage, 1000 / 15);
-                
-                return new cast.framework.messages.MediaInformation();
+        function connectWebSocket(url) {
+            // Đóng kết nối cũ nếu có
+            if (websocket) {
+                websocket.close();
             }
-        );
+            
+            websocket = new WebSocket(url);
+            websocket.binaryType = 'blob';
+
+            websocket.onopen = () => {
+                console.log('WebSocket connection established!');
+            };
+
+            // Khi nhận được một khung hình (dưới dạng binary blob)
+            websocket.onmessage = (event) => {
+                // Chuyển blob thành một URL tạm thời và gán vào ảnh
+                screenImg.src = URL.createObjectURL(event.data);
+            };
+
+            websocket.onerror = (error) => {
+                console.error('WebSocket Error:', error);
+            };
+
+            websocket.onclose = () => {
+                console.log('WebSocket connection closed.');
+            };
+        }
         
         context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
+            if (websocket) websocket.close();
             window.close();
         });
 
