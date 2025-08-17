@@ -10,47 +10,70 @@
             width: 100%;
             overflow: hidden; 
             background-color: #000; 
+            color: white; /* Đặt màu chữ mặc định là trắng */
+            font-family: sans-serif;
         }
         video { 
             width: 100%; 
             height: 100%; 
-            /* Đảm bảo video lấp đầy màn hình ngang mà không bị méo */
             object-fit: cover; 
+            position: absolute; /* Đặt video lên trên để che chữ khi phát */
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        /* <<< THÊM: Style cho dòng chữ kiểm tra >>> */
+        #status-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            z-index: 2; /* Hiển thị trên cùng ban đầu */
         }
     </style>
 </head>
 <body>
+    <div id="status-text">Kết nối thành công</div>
+
     <video id="videoElement" autoplay playsinline></video>
+    
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
+        const statusText = document.getElementById('status-text');
 
         playerManager.setMessageInterceptor(
             cast.framework.messages.MessageType.LOAD,
             loadRequestData => {
-                const media = loadRequestdata.media;
-                // Nhận URL của luồng video từ điện thoại
+                // <<< THÊM: Ẩn dòng chữ đi khi bắt đầu tải video >>>
+                statusText.style.display = 'none';
+
+                const media = loadRequestData.media;
+                if (!media || !media.contentId) {
+                    console.error('Load request received, but media or contentId is missing!');
+                    return null;
+                }
+
                 const videoUrl = media.contentId; 
-                
-                console.log('Load request received. Stream URL:', videoUrl);
+                console.log('>>> THÀNH CÔNG: TV đã nhận được lệnh LOAD với URL:', videoUrl);
                 
                 const videoElement = document.getElementById('videoElement');
                 videoElement.src = videoUrl;
                 videoElement.load();
                 videoElement.play().catch(error => {
-                    console.error('Video play failed:', error);
+                    console.error('Lỗi khi cố gắng phát video:', error);
                 });
                 
-                // Trả về null để ngăn trình phát mặc định của Cast xử lý
-                return null; 
+                return null;
             }
         );
 
-        // Bắt đầu Receiver
         const options = new cast.framework.CastReceiverOptions();
-        options.disableIdleTimeout = true; // Giữ cho receiver không bị tự động tắt
+        options.disableIdleTimeout = true;
         context.start(options);
+        console.log('Receiver started. Status text should be visible.');
     </script>
 </body>
 </html>
