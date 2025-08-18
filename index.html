@@ -46,11 +46,11 @@
                     clearInterval(refreshInterval);
                 }
                 
-                // Bắt đầu làm mới ảnh sau mỗi 5 giây
+                // Bắt đầu làm mới ảnh sau mỗi45 giây
                 refreshInterval = setInterval(() => {
                     // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
                     screenImg.src = data.url + '?t=' + new Date().getTime();
-                }, 5000); // 5000 mili-giây = 5 giây
+                }, 4000); // 4000 mili-giây = 4 giây
             }
         });
         
@@ -65,3 +65,4 @@
     </script>
 </body>
 </html>
+
