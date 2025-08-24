@@ -6,13 +6,13 @@
     <style>
         body, html { 
             margin: 0; padding: 0; height: 100%; width: 100%;
-            overflow: hidden; background-color: #ADD8E6;
+            overflow: hidden; background-color: #00008B;
         }
         img {
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-}
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
         #status-text {
             position: absolute;
             top: 45%;
@@ -38,37 +38,23 @@
         let refreshInterval = null;
 
         context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
-    try {
-        // BƯỚC QUAN TRỌNG: Kiểm tra xem data là chuỗi hay đối tượng
-        let data;
-        if (typeof event.data === 'string') {
-            console.log("Dữ liệu nhận được là chuỗi, đang parse...");
-            data = JSON.parse(event.data); // Nếu là chuỗi, chuyển đổi nó
-        } else {
-            console.log("Dữ liệu nhận được đã là đối tượng, sử dụng trực tiếp.");
-            data = event.data; // Nếu đã là đối tượng, dùng trực tiếp
-        }
-
-        // Logic xử lý sau khi đã có đối tượng 'data' chuẩn
-        if (data && data.type === 'START_STREAM' && data.url) {
-            console.log('Lệnh START_STREAM hợp lệ với URL:', data.url);
-            statusText.style.display = 'none';
-
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
+            const data = event.data;
+            if (data && data.type === 'START_STREAM') {
+                console.log('Received START_STREAM command with URL:', data.url);
+                statusText.style.display = 'none'; // Ẩn chữ đi
+                
+                // Dừng interval cũ nếu có
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
+                
+                // Bắt đầu làm mới ảnh sau mỗi 4 giây
+                refreshInterval = setInterval(() => {
+                    // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
+                    screenImg.src = data.url + '?t=' + new Date().getTime();
+                }, 4000); // 4000 mili-giây = 4 giây
             }
-
-            refreshInterval = setInterval(() => {
-                screenImg.src = data.url + '?t=' + new Date().getTime();
-            }, 2000); // Tần suất làm mới ảnh (2000ms)
-
-        } else {
-            console.warn("Nhận được dữ liệu nhưng không hợp lệ:", data);
-        }
-    } catch (e) {
-        console.error("Lỗi nghiêm trọng khi xử lý tin nhắn:", e);
-    }
-});
+        });
         
         context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
             if (refreshInterval) clearInterval(refreshInterval);
@@ -81,5 +67,3 @@
     </script>
 </body>
 </html>
-
-
