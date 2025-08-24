@@ -43,6 +43,15 @@
                 console.log('Received START_STREAM command with URL:', data.url);
                 statusText.style.display = 'none'; // Ẩn chữ đi
                 
+                // Test load ảnh ngay lập tức
+                screenImg.onload = function() {
+                    console.log('Image loaded successfully!');
+                };
+                screenImg.onerror = function() {
+                    console.log('Image failed to load!');
+                };
+                screenImg.src = data.url + '?t=' + new Date().getTime();
+                
                 // Dừng interval cũ nếu có
                 if (refreshInterval) {
                     clearInterval(refreshInterval);
@@ -51,7 +60,9 @@
                 // Bắt đầu làm mới ảnh sau mỗi 4 giây
                 refreshInterval = setInterval(() => {
                     // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
-                    screenImg.src = data.url + '?t=' + new Date().getTime();
+                    const newUrl = data.url + '?t=' + new Date().getTime();
+                    console.log('Refreshing image:', newUrl);
+                    screenImg.src = newUrl;
                 }, 4000); // 4000 mili-giây = 4 giây
             }
         });
