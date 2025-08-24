@@ -39,27 +39,34 @@
 
         context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
     try {
-        // SỬA LỖI: Chuyển đổi chuỗi JSON thành đối tượng
-        const data = JSON.parse(event.data);
+        // BƯỚC QUAN TRỌNG: Kiểm tra xem data là chuỗi hay đối tượng
+        let data;
+        if (typeof event.data === 'string') {
+            console.log("Dữ liệu nhận được là chuỗi, đang parse...");
+            data = JSON.parse(event.data); // Nếu là chuỗi, chuyển đổi nó
+        } else {
+            console.log("Dữ liệu nhận được đã là đối tượng, sử dụng trực tiếp.");
+            data = event.data; // Nếu đã là đối tượng, dùng trực tiếp
+        }
 
-        if (data && data.type === 'START_STREAM') {
-            console.log('Received START_STREAM command with URL:', data.url);
-            statusText.style.display = 'none'; // Ẩn chữ đi
+        // Logic xử lý sau khi đã có đối tượng 'data' chuẩn
+        if (data && data.type === 'START_STREAM' && data.url) {
+            console.log('Lệnh START_STREAM hợp lệ với URL:', data.url);
+            statusText.style.display = 'none';
 
-            // Dừng interval cũ nếu có
             if (refreshInterval) {
                 clearInterval(refreshInterval);
             }
 
-            // Bắt đầu làm mới ảnh
             refreshInterval = setInterval(() => {
-                // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
                 screenImg.src = data.url + '?t=' + new Date().getTime();
-            }, 2000); // <-- Gợi ý: Dùng giá trị thấp để ảnh mượt hơn, ví dụ 150ms
+            }, 2000); // Tần suất làm mới ảnh (2000ms)
 
+        } else {
+            console.warn("Nhận được dữ liệu nhưng không hợp lệ:", data);
         }
     } catch (e) {
-        console.error("Không thể phân tích dữ liệu nhận được:", e);
+        console.error("Lỗi nghiêm trọng khi xử lý tin nhắn:", e);
     }
 });
         
@@ -74,3 +81,4 @@
     </script>
 </body>
 </html>
+
