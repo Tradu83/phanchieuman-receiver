@@ -1,534 +1,70 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
+    <title>Screen Mirror Receiver</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chiếu Màn Hình Điện Thoại</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        body, html { 
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            overflow: hidden; background-color: #000;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        .container {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #000;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-
-        .screen-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .status-overlay {
+        img {
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+        #status-text {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 500;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-        }
-
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 18px;
+            top: 45%;
+            width: 100%;
             text-align: center;
-            z-index: 5;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .error-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ff6b6b;
-            font-size: 16px;
-            text-align: center;
-            background: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 10px;
-            z-index: 5;
-        }
-
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 15px;
-            z-index: 10;
-        }
-
-        .control-btn {
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .control-btn:hover {
-            background: rgba(255,255,255,0.2);
-            transform: translateY(-2px);
-        }
-
-        .control-btn:active {
-            transform: translateY(0);
-        }
-
-        .fullscreen-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 18px;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-
-        .fullscreen-btn:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .info-panel {
-            position: absolute;
-            top: 20px;
-            right: 80px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 12px;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-            display: none;
-        }
-
-        .info-panel.show {
-            display: block;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .status-overlay {
-                font-size: 12px;
-                padding: 8px 16px;
-            }
-            
-            .controls {
-                bottom: 10px;
-                gap: 10px;
-            }
-            
-            .control-btn {
-                padding: 10px 20px;
-                font-size: 12px;
-            }
-        }
-
-        /* TV optimization - Full screen display */
-        @media (min-width: 1920px) {
-            .screen-image {
-                object-fit: cover;
-            }
-        }
-        
-        /* Ensure full screen on all TV sizes */
-        @media (min-width: 1450px) {
-            .screen-image {
-                object-fit: cover;
-                width: 100vw;
-                height: 100vh;
-            }
+            font-size: 36px;
+            font-weight: bold;
+            color: #FFFF00;
+            text-shadow: 2px 2px 4px #000;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="video-container">
-            <img id="screenImage" class="screen-image" alt="Màn hình điện thoại" style="display: none;">
-            
-            <div id="loading" class="loading">
-                <div class="spinner"></div>
-                <div>Đang kết nối...</div>
-            </div>
-            
-            <div id="errorMessage" class="error-message" style="display: none;">
-                Không thể kết nối đến điện thoại
-            </div>
-        </div>
-
-        <div id="statusOverlay" class="status-overlay">
-            <span id="statusText">Đang chờ kết nối...</span>
-        </div>
-
-        <div id="infoPanel" class="info-panel">
-            <div>Độ phân giải: <span id="resolution">-</span></div>
-            <div>FPS: <span id="fps">-</span></div>
-            <div>Kích thước: <span id="imageSize">-</span></div>
-        </div>
-
-        <button id="fullscreenBtn" class="fullscreen-btn" title="Toàn màn hình">
-            ⛶
-        </button>
-
-        <div class="controls">
-            <button id="refreshBtn" class="control-btn">Làm mới</button>
-            <button id="infoBtn" class="control-btn">Thông tin</button>
-        </div>
-    </div>
-
+    <div id="status-text">Chờ kết nối...</div>
+    <img id="screen-img" />
+    
+    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script>
-        class ScreenCastViewer {
-            constructor() {
-                this.imageElement = document.getElementById('screenImage');
-                this.loadingElement = document.getElementById('loading');
-                this.errorElement = document.getElementById('errorMessage');
-                this.statusElement = document.getElementById('statusText');
-                this.infoPanel = document.getElementById('infoPanel');
-                this.resolutionElement = document.getElementById('resolution');
-                this.fpsElement = document.getElementById('fps');
-                this.imageSizeElement = document.getElementById('imageSize');
+        const CUSTOM_NAMESPACE = "urn:x-cast:com.tranduyen.chieuphone.custom";
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const screenImg = document.getElementById('screen-img');
+        const statusText = document.getElementById('status-text');
+        let refreshInterval = null;
+
+        context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
+            const data = event.data;
+            if (data && data.type === 'START_STREAM') {
+                console.log('Received START_STREAM command with URL:', data.url);
+                statusText.style.display = 'none'; // Ẩn chữ đi
                 
-                this.isConnected = false;
-                this.frameCount = 0;
-                this.lastFrameTime = Date.now();
-                this.fps = 0;
-                this.updateInterval = 4000; // 4 giây
-                this.serverUrl = '';
-                
-                this.initializeEventListeners();
-                this.detectServerUrl();
-            }
-
-            initializeEventListeners() {
-                // Nút làm mới
-                document.getElementById('refreshBtn').addEventListener('click', () => {
-                    this.refreshConnection();
-                });
-
-                // Nút thông tin
-                document.getElementById('infoBtn').addEventListener('click', () => {
-                    this.toggleInfoPanel();
-                });
-
-                // Nút toàn màn hình
-                document.getElementById('fullscreenBtn').addEventListener('click', () => {
-                    this.toggleFullscreen();
-                });
-
-                // Xử lý phím tắt
-                document.addEventListener('keydown', (e) => {
-                    switch(e.key) {
-                        case 'F11':
-                            e.preventDefault();
-                            this.toggleFullscreen();
-                            break;
-                        case 'F5':
-                            e.preventDefault();
-                            this.refreshConnection();
-                            break;
-                        case 'i':
-                        case 'I':
-                            this.toggleInfoPanel();
-                            break;
-                    }
-                });
-
-                // Xử lý khi ảnh load thành công
-                this.imageElement.addEventListener('load', () => {
-                    this.onImageLoaded();
-                });
-
-                // Xử lý khi ảnh load lỗi
-                this.imageElement.addEventListener('error', () => {
-                    this.onImageError();
-                });
-            }
-
-            detectServerUrl() {
-                // Tự động phát hiện URL server từ URL hiện tại
-                const currentUrl = window.location.href;
-                const urlParams = new URLSearchParams(window.location.search);
-                const serverUrl = urlParams.get('server') || this.extractServerUrl(currentUrl);
-                
-                if (serverUrl) {
-                    this.serverUrl = serverUrl;
-                    this.startStreaming();
-                } else {
-                    // Thử các URL mặc định
-                    this.tryDefaultUrls();
-                }
-            }
-
-            extractServerUrl(url) {
-                // Trích xuất URL server từ URL hiện tại
-                const urlObj = new URL(url);
-                if (urlObj.hostname && urlObj.port) {
-                    return `${urlObj.protocol}//${urlObj.hostname}:${urlObj.port}`;
-                }
-                return null;
-            }
-
-            async tryDefaultUrls() {
-                const defaultPorts = [8088, 8080, 3000];
-                const hostname = window.location.hostname || 'localhost';
-                
-                for (const port of defaultPorts) {
-                    const testUrl = `http://${hostname}:${port}`;
-                    try {
-                        const response = await fetch(testUrl, { method: 'HEAD', timeout: 2000 });
-                        if (response.ok) {
-                            this.serverUrl = testUrl;
-                            this.startStreaming();
-                            return;
-                        }
-                    } catch (e) {
-                        console.log(`Không thể kết nối đến ${testUrl}`);
-                    }
+                // Dừng interval cũ nếu có
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
                 }
                 
-                this.showError('Không tìm thấy server phản chiếu màn hình');
-            }
-
-            startStreaming() {
-                this.updateStatus('Đã kết nối, đang tải hình ảnh...');
-                this.hideError();
-                this.showLoading();
-                this.loadNextFrame();
-            }
-
-            loadNextFrame() {
-                if (!this.serverUrl) return;
-
-                const timestamp = Date.now();
-                const imageUrl = `${this.serverUrl}?t=${timestamp}`;
-                
-                this.imageElement.src = imageUrl;
-                
-                // Lên lịch frame tiếp theo
-                setTimeout(() => {
-                    if (this.isConnected) {
-                        this.loadNextFrame();
-                    }
-                }, this.updateInterval);
-            }
-
-            onImageLoaded() {
-                this.isConnected = true;
-                this.hideLoading();
-                this.hideError();
-                this.updateStatus('Đang phản chiếu màn hình - Full Screen');
-                
-                // Cập nhật thông tin
-                this.updateFrameInfo();
-                
-                // Hiển thị ảnh
-                this.imageElement.style.display = 'block';
-                
-                // Đảm bảo ảnh lấp đầy màn hình
-                this.ensureFullScreen();
-            }
-
-            onImageError() {
-                this.isConnected = false;
-                this.showError('Không thể tải hình ảnh từ điện thoại');
-                this.hideLoading();
-                this.imageElement.style.display = 'none';
-            }
-
-            updateFrameInfo() {
-                this.frameCount++;
-                const now = Date.now();
-                const timeDiff = now - this.lastFrameTime;
-                
-                if (timeDiff > 0) {
-                    this.fps = Math.round((1000 / timeDiff) * 10) / 10;
-                }
-                
-                this.lastFrameTime = now;
-                
-                // Cập nhật thông tin hiển thị
-                const width = this.imageElement.naturalWidth;
-                const height = this.imageElement.naturalHeight;
-                this.resolutionElement.textContent = `${width} x ${height}`;
-                this.fpsElement.textContent = this.fps.toFixed(1);
-                this.imageSizeElement.textContent = this.formatBytes(this.getImageSize());
-                
-                // Log thông tin để debug
-                console.log(`Frame loaded: ${width}x${height}, FPS: ${this.fps.toFixed(1)}`);
-            }
-
-            getImageSize() {
-                // Ước tính kích thước ảnh dựa trên canvas
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = this.imageElement.naturalWidth;
-                canvas.height = this.imageElement.naturalHeight;
-                ctx.drawImage(this.imageElement, 0, 0);
-                
-                try {
-                    return canvas.toDataURL('image/jpeg', 0.9).length;
-                } catch (e) {
-                    return 0;
-                }
-            }
-
-            formatBytes(bytes) {
-                if (bytes === 0) return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-
-            refreshConnection() {
-                this.isConnected = false;
-                this.frameCount = 0;
-                this.fps = 0;
-                this.updateStatus('Đang kết nối lại...');
-                this.startStreaming();
-            }
-
-            toggleInfoPanel() {
-                this.infoPanel.classList.toggle('show');
-            }
-
-            toggleFullscreen() {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(err => {
-                        console.log('Không thể vào chế độ toàn màn hình:', err);
-                    });
-                } else {
-                    document.exitFullscreen();
-                }
-            }
-
-            updateStatus(message) {
-                this.statusElement.textContent = message;
-            }
-
-            showLoading() {
-                this.loadingElement.style.display = 'block';
-            }
-
-            hideLoading() {
-                this.loadingElement.style.display = 'none';
-            }
-
-            showError(message) {
-                this.errorElement.textContent = message;
-                this.errorElement.style.display = 'block';
-            }
-
-            hideError() {
-                this.errorElement.style.display = 'none';
-            }
-            
-            ensureFullScreen() {
-                // Đảm bảo ảnh lấp đầy màn hình TV
-                const image = this.imageElement;
-                const container = document.querySelector('.video-container');
-                
-                if (image && container) {
-                    // Đặt ảnh lấp đầy container
-                    image.style.width = '100%';
-                    image.style.height = '100%';
-                    image.style.objectFit = 'cover';
-                    
-                    // Đảm bảo container cũng lấp đầy viewport
-                    container.style.width = '100vw';
-                    container.style.height = '100vh';
-                }
-            }
-        }
-
-        // Khởi tạo ứng dụng khi trang đã load
-        document.addEventListener('DOMContentLoaded', () => {
-            const viewer = new ScreenCastViewer();
-            
-            // Đảm bảo full screen khi resize
-            window.addEventListener('resize', () => {
-                viewer.ensureFullScreen();
-            });
-        });
-
-        // Xử lý khi trang bị ẩn/hiện
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                console.log('Trang bị ẩn, tạm dừng cập nhật');
-            } else {
-                console.log('Trang được hiển thị, tiếp tục cập nhật');
+                // Bắt đầu làm mới ảnh sau mỗi45 giây
+                refreshInterval = setInterval(() => {
+                    // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
+                    screenImg.src = data.url + '?t=' + new Date().getTime();
+                }, 4000); // 4000 mili-giây = 4 giây
             }
         });
+        
+        context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
+            if (refreshInterval) clearInterval(refreshInterval);
+            window.close();
+        });
+
+        const options = new cast.framework.CastReceiverOptions();
+        options.disableIdleTimeout = true;
+        context.start(options);
     </script>
 </body>
 </html>
+
