@@ -38,23 +38,30 @@
         let refreshInterval = null;
 
         context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
-            const data = event.data;
-            if (data && data.type === 'START_STREAM') {
-                console.log('Received START_STREAM command with URL:', data.url);
-                statusText.style.display = 'none'; // Ẩn chữ đi
-                
-                // Dừng interval cũ nếu có
-                if (refreshInterval) {
-                    clearInterval(refreshInterval);
-                }
-                
-                // Bắt đầu làm mới ảnh sau mỗi 4 giây
-                refreshInterval = setInterval(() => {
-                    // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
-                    screenImg.src = data.url + '?t=' + new Date().getTime();
-                }, 4000); // 4000 mili-giây = 4 giây
+    try {
+        // SỬA LỖI: Chuyển đổi chuỗi JSON thành đối tượng
+        const data = JSON.parse(event.data);
+
+        if (data && data.type === 'START_STREAM') {
+            console.log('Received START_STREAM command with URL:', data.url);
+            statusText.style.display = 'none'; // Ẩn chữ đi
+
+            // Dừng interval cũ nếu có
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
             }
-        });
+
+            // Bắt đầu làm mới ảnh
+            refreshInterval = setInterval(() => {
+                // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
+                screenImg.src = data.url + '?t=' + new Date().getTime();
+            }, 2000); // <-- Gợi ý: Dùng giá trị thấp để ảnh mượt hơn, ví dụ 150ms
+
+        }
+    } catch (e) {
+        console.error("Không thể phân tích dữ liệu nhận được:", e);
+    }
+});
         
         context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
             if (refreshInterval) clearInterval(refreshInterval);
