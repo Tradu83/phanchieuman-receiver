@@ -9,10 +9,10 @@
             overflow: hidden; background-color: #000;
         }
         img {
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-}
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
         #status-text {
             position: absolute;
             top: 45%;
@@ -48,7 +48,7 @@
                     clearInterval(refreshInterval);
                 }
                 
-                // Bắt đầu làm mới ảnh sau mỗi45 giây
+                // Bắt đầu làm mới ảnh sau mỗi 4 giây
                 refreshInterval = setInterval(() => {
                     // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
                     screenImg.src = data.url + '?t=' + new Date().getTime();
@@ -67,4 +67,3 @@
     </script>
 </body>
 </html>
-
