@@ -63,7 +63,7 @@
 
                     refreshInterval = setInterval(() => {
                         screenImg.src = data.url + '?t=' + new Date().getTime();
-                    }, 150); // Chu kỳ làm mới 150ms
+                    }, 3000); // Chu kỳ làm mới 3000ms
 
                 } else {
                     console.warn("Nhận được dữ liệu nhưng không hợp lệ:", data);
@@ -84,3 +84,4 @@
     </script>
 </body>
 </html>
+
