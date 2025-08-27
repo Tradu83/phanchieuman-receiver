@@ -5,18 +5,15 @@
     <meta charset="UTF-8">
     <style>
         body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            width: 100%;
-            overflow: hidden; 
-            background-color: #00008B; /* Xanh lam đậm */
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            overflow: hidden;
+			background-color: #00008B; /* Xanh lam đậm */
         }
         img {
-            width: 100vw;
-            height: 100vh;
-            object-fit: contain; /* Dùng 'contain' để đảm bảo ảnh 16:9 không bị cắt trên TV hơi khác tỷ lệ */
-        }
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
         #status-text {
             position: absolute;
             top: 45%;
@@ -24,7 +21,7 @@
             text-align: center;
             font-size: 36px;
             font-weight: bold;
-            color: #FFFFFF; /* Chữ trắng */
+            color: #FFFF00;
             text-shadow: 2px 2px 4px #000;
         }
     </style>
@@ -42,44 +39,31 @@
         let refreshInterval = null;
 
         context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
-            try {
-                // Xử lý linh hoạt: Kiểm tra xem data là chuỗi hay đối tượng
-                let data;
-                if (typeof event.data === 'string') {
-                    console.log("Dữ liệu nhận được là chuỗi, đang parse...");
-                    data = JSON.parse(event.data);
-                } else {
-                    console.log("Dữ liệu nhận được đã là đối tượng, sử dụng trực tiếp.");
-                    data = event.data;
+            const data = event.data;
+            if (data && data.type === 'START_STREAM') {
+                console.log('Received START_STREAM command with URL:', data.url);
+                statusText.style.display = 'none'; // Ẩn chữ đi
+                
+                // Dừng interval cũ nếu có
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
                 }
-
-                if (data && data.type === 'START_STREAM' && data.url) {
-                    console.log('Lệnh START_STREAM hợp lệ với URL:', data.url);
-                    statusText.style.display = 'none';
-
-                    if (refreshInterval) {
-                        clearInterval(refreshInterval);
-                    }
-
-                    refreshInterval = setInterval(() => {
-                        screenImg.src = data.url + '?t=' + new Date().getTime();
-                    }, 3000); // Chu kỳ làm mới 3000ms
-
-                } else {
-                    console.warn("Nhận được dữ liệu nhưng không hợp lệ:", data);
-                }
-            } catch (e) {
-                console.error("Lỗi nghiêm trọng khi xử lý tin nhắn:", e);
+                
+                // Bắt đầu làm mới ảnh sau mỗi45 giây
+                refreshInterval = setInterval(() => {
+                    // Thêm tham số ngẫu nhiên để tránh trình duyệt cache ảnh cũ
+                    screenImg.src = data.url + '?t=' + new Date().getTime();
+                }, 4000); // 4000 mili-giây = 4 giây
             }
         });
-
+        
         context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
             if (refreshInterval) clearInterval(refreshInterval);
-            window.close(); // Đóng ứng dụng trên TV khi người dùng ngắt kết nối
+            window.close();
         });
 
         const options = new cast.framework.CastReceiverOptions();
-        options.disableIdleTimeout = true; // Ngăn TV tự tắt ứng dụng
+        options.disableIdleTimeout = true;
         context.start(options);
     </script>
 </body>
