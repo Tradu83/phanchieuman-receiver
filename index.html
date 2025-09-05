@@ -7,13 +7,13 @@
         body, html { 
             margin: 0; padding: 0; height: 100%; width: 100%;
             overflow: hidden;
-			background-color: #00008B; /* Xanh lam đậm */
+            background-color: #00008B; /* Xanh lam đậm */
         }
         img {
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-}
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
         #status-text {
             position: absolute;
             top: 45%;
@@ -28,7 +28,7 @@
 </head>
 <body>
     <div id="status-text">Chờ kết nối...</div>
-    <img id="screen-img" />
+    <img id="screen-img" style="display: none;" />
     
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script>
@@ -37,80 +37,113 @@
         const screenImg = document.getElementById('screen-img');
         const statusText = document.getElementById('status-text');
         let refreshInterval = null;
+        let isStreaming = false;
 
+        console.log('Receiver đã khởi động');
+
+        // Xử lý custom message
         context.addCustomMessageListener(CUSTOM_NAMESPACE, (event) => {
-            const data = event.data;
-            if (data && data.type === 'START_STREAM') {
-                console.log('Received START_STREAM:', data);
-                statusText.style.display = 'none'; // Ẩn chữ đi
+            console.log('Nhận custom message:', event.data);
+            
+            try {
+                const data = JSON.parse(event.data);
                 
-                // Dừng interval cũ nếu có
-                if (refreshInterval) {
-                    clearInterval(refreshInterval);
+                if (data.type === 'START_STREAM') {
+                    console.log('Bắt đầu streaming:', data);
+                    statusText.textContent = 'Đang kết nối...';
+                    startStreaming(data.url);
+                } else if (data.type === 'STOP_STREAM') {
+                    console.log('Dừng streaming');
+                    stopStreaming();
                 }
-                
-                const mode = (data.mode || 'jpeg').toLowerCase();
-                
-                // Tải ảnh đầu tiên ngay lập tức, có cơ chế retry ngắn nếu lỗi (chỉ áp dụng cho JPEG)
-                const firstLoadStart = Date.now();
-                const FIRST_LOAD_TIMEOUT_MS = 5000; // tối đa 5 giây cho lần đầu
-                const FIRST_LOAD_RETRY_MS = 300;     // retry mỗi 300ms nếu lỗi
-
-                const startPolling = () => {
-                                    // Bắt đầu làm mới ảnh sau mỗi 3 giây
-                refreshInterval = setInterval(() => {
-                    screenImg.src = data.url + '?t=' + Date.now();
-                }, 3000); // 3000 mili-giây = 3 giây
-                };
-
-                const tryLoadFirst = () => {
-                    // Gắn handler tạm thời cho lần tải đầu
-                    screenImg.onload = () => {
-                        // Xóa handler tạm và bắt đầu polling
-                        screenImg.onload = null;
-                        screenImg.onerror = null;
-                        startPolling();
-                    };
-                    screenImg.onerror = () => {
-                        // Nếu quá thời gian, vẫn khởi động polling để tiếp tục lấy ảnh sau
-                        if (Date.now() - firstLoadStart > FIRST_LOAD_TIMEOUT_MS) {
-                            screenImg.onload = null;
-                            screenImg.onerror = null;
-                            startPolling();
-                            return;
-                        }
-                        // Thử lại sau một khoảng ngắn
-                        setTimeout(tryLoadFirst, FIRST_LOAD_RETRY_MS);
-                    };
-                    // Kích hoạt tải ảnh (kèm cache-buster)
-                    screenImg.src = data.url + '?t=' + Date.now();
-                };
-
-                // Chỉ dùng JPEG/poll mỗi 2 giây để tiết kiệm băng thông
-                // Nếu là URL HTTPS (Firebase), tải ngay và poll
-                if (data.url && data.url.startsWith('https://')) {
-                    screenImg.onload = null;
-                    screenImg.onerror = null;
-                    screenImg.src = data.url + '?t=' + Date.now();
-                    // Bắt đầu poll mỗi 3 giây
-                    refreshInterval = setInterval(() => {
-                        screenImg.src = data.url + '?t=' + Date.now();
-                    }, 3000);
-                } else {
-                    // HTTP nội bộ với retry logic
-                    tryLoadFirst();
-                }
+            } catch (e) {
+                console.error('Lỗi parse message:', e);
+                statusText.textContent = 'Lỗi nhận message';
             }
         });
-        
+
+        function startStreaming(url) {
+            if (isStreaming) return;
+            isStreaming = true;
+            
+            console.log('Streaming URL:', url);
+            
+            // Thử load ảnh đầu tiên
+            loadFirstImage(url);
+            
+            // Bắt đầu polling
+            refreshInterval = setInterval(() => {
+                loadImage(url);
+            }, 3000);
+        }
+
+        function loadFirstImage(url) {
+            if (!url) return;
+            
+            console.log('Loading first image...');
+            
+            const img = new Image();
+            img.onload = () => {
+                console.log('First image loaded successfully');
+                screenImg.src = img.src;
+                screenImg.style.display = 'block';
+                statusText.style.display = 'none';
+            };
+            
+            img.onerror = () => {
+                console.error('Failed to load first image');
+                // Vẫn tiếp tục polling
+            };
+            
+            img.src = url + '?t=' + Date.now();
+        }
+
+        function loadImage(url) {
+            if (!url) return;
+            
+            const img = new Image();
+            img.onload = () => {
+                screenImg.src = img.src;
+                if (screenImg.style.display === 'none') {
+                    screenImg.style.display = 'block';
+                    statusText.style.display = 'none';
+                }
+            };
+            
+            img.onerror = () => {
+                console.error('Failed to load image');
+            };
+            
+            img.src = url + '?t=' + Date.now();
+        }
+
+        function stopStreaming() {
+            isStreaming = false;
+            
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+            
+            screenImg.style.display = 'none';
+            statusText.style.display = 'block';
+            statusText.textContent = 'Đã dừng phản chiếu';
+            
+            console.log('Streaming stopped');
+        }
+
+        // Xử lý khi sender disconnect
         context.addEventListener(cast.framework.system.EventType.SENDER_DISCONNECTED, () => {
-            if (refreshInterval) clearInterval(refreshInterval);
-            window.close();
+            console.log('Sender disconnected');
+            stopStreaming();
         });
 
+        // Khởi động receiver
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
         context.start(options);
+        
+        console.log('Receiver context started');
     </script>
 </body>
 </html>
