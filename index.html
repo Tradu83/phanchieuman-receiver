@@ -57,10 +57,10 @@
                 const FIRST_LOAD_RETRY_MS = 300;     // retry mỗi 300ms nếu lỗi
 
                 const startPolling = () => {
-                    // Bắt đầu làm mới ảnh sau mỗi 2 giây
-                    refreshInterval = setInterval(() => {
-                        screenImg.src = data.url + '?t=' + Date.now();
-                    }, 2000); // 2000 mili-giây = 2 giây
+                                    // Bắt đầu làm mới ảnh sau mỗi 3 giây
+                refreshInterval = setInterval(() => {
+                    screenImg.src = data.url + '?t=' + Date.now();
+                }, 3000); // 3000 mili-giây = 3 giây
                 };
 
                 const tryLoadFirst = () => {
@@ -86,13 +86,18 @@
                     screenImg.src = data.url + '?t=' + Date.now();
                 };
 
-                if (mode === 'mjpeg' && data.url_mjpeg) {
-                    // Dùng MJPEG: chỉ cần set src một lần
+                // Chỉ dùng JPEG/poll mỗi 2 giây để tiết kiệm băng thông
+                // Nếu là URL HTTPS (Firebase), tải ngay và poll
+                if (data.url && data.url.startsWith('https://')) {
                     screenImg.onload = null;
                     screenImg.onerror = null;
-                    screenImg.src = data.url_mjpeg;
+                    screenImg.src = data.url + '?t=' + Date.now();
+                    // Bắt đầu poll mỗi 3 giây
+                    refreshInterval = setInterval(() => {
+                        screenImg.src = data.url + '?t=' + Date.now();
+                    }, 3000);
                 } else {
-                    // Mặc định JPEG/poll mỗi 2 giây
+                    // HTTP nội bộ với retry logic
                     tryLoadFirst();
                 }
             }
